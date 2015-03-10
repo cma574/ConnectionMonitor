@@ -303,7 +303,7 @@ public class PingThread extends Thread
 	private void handlePing(boolean reachable, String pingIP, double pingLatency) throws IOException
 	{
 		Date currentDate = new Date();
-		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US);
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS a", Locale.US);
 		
 		if(reachable)
 		{
