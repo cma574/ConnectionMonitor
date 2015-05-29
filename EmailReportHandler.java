@@ -15,7 +15,7 @@ public class EmailReportHandler
 	private Emailer emailer;
 	private DBAccessHandler dbAccessHandler;
 	private final String NOTIFY_LIST, EMERGENCY_NOTIFY_LIST; 
-	private final int HOURS_FOR_REPORT;
+	private int reportFrequency;
 	private volatile int numEmergencyReportSites;
 	private ArrayList<String> activePingSiteNames;
 	private Date startEmergency, lastRegularReport;
@@ -24,16 +24,17 @@ public class EmailReportHandler
 	 * Constructor
 	 * @param emailSender            Emailer for sending reports with
 	 * @param dbHandler              DBAccessHandler for getting information to create reports
+	 * @param emailFrequency         Number of hours between regular reports
 	 * @param emailList              List of email addresses to send regular reports to
 	 * @param emergencyEmailList     List of email addresses to send emergency reports to
 	 */
-	public EmailReportHandler(Emailer emailSender, DBAccessHandler dbHandler, String emailList, String emergencyEmailList)
+	public EmailReportHandler(Emailer emailSender, DBAccessHandler dbHandler, int emailFrequency, String emailList, String emergencyEmailList)
 	{
 		emailer = emailSender;
 		dbAccessHandler = dbHandler;
 		NOTIFY_LIST = emailList;
 		EMERGENCY_NOTIFY_LIST = emergencyEmailList;
-		HOURS_FOR_REPORT = 6;
+		reportFrequency = emailFrequency;
 		numEmergencyReportSites = 0;
 		activePingSiteNames = new ArrayList<>();
 		lastRegularReport = MoreDateFunctions.roundToHour(new Date());
@@ -55,7 +56,7 @@ public class EmailReportHandler
 	public synchronized void checkReportSend() throws SQLException
 	{
 		Date currentDate = new Date();
-		if(MoreDateFunctions.timeDiffInHours(currentDate, lastRegularReport) >= HOURS_FOR_REPORT)
+		if(MoreDateFunctions.timeDiffInHours(currentDate, lastRegularReport) >= reportFrequency)
 			sendRegularReport(MoreDateFunctions.roundToHour(currentDate));
 	}
 	
@@ -89,7 +90,7 @@ public class EmailReportHandler
 	 */
 	private synchronized void sendRegularReport(Date currentDate) throws SQLException
 	{
-		String subject = "ConnectionMonitor Hourly Report";
+		String subject = "ConnectionMonitor Regular Report";
 		String message = "";
 		for(String siteName : activePingSiteNames)
 		{

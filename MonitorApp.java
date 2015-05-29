@@ -55,13 +55,14 @@ public class MonitorApp
 				String dbPwd = emailerConfig.getProperty("DBPassword");
 				String emailAddress = emailerConfig.getProperty("EmailAddress");
 				String emailPwd = emailerConfig.getProperty("EmailPassword");
+				int reportFrequency = Integer.parseInt(emailerConfig.getProperty("ReportFrequency"));
 				String notifyList = emailerConfig.getProperty("NotifyList");
 				String emergencyNotifyList = emailerConfig.getProperty("EmergencyNotifyList");
 				dbAccessHandler = new DBAccessHandler(dbName, dbUser, dbPwd);
 				dbAccessHandler.initDBConnection();
 				emailer = new Emailer(emailAddress, emailPwd);
 				
-				emailReportHandler = new EmailReportHandler(emailer, dbAccessHandler, notifyList, emergencyNotifyList);
+				emailReportHandler = new EmailReportHandler(emailer, dbAccessHandler, reportFrequency, notifyList, emergencyNotifyList);
 				
 				ArrayList<PingSite> pingSites = getPingSitesFromConfig(pingSitesConfig);
 				

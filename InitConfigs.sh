@@ -12,6 +12,7 @@ if [ ! -s DBEmailer.properties ]; then
     echo 'DBPassword='>>DBEmailer.properties
     echo 'EmailAddress='>>DBEmailer.properties
     echo 'EmailPassword='>>DBEmailer.properties
+    echo 'ReportFrequency='>>DBEmailer.properties
     echo 'NotifyList='>>DBEmailer.properties
     echo 'EmergencyNotifyList='>>DBEmailer.properties
     echo 'DBEmailer.properties created, please fill in template before running ConnectionMonitor.'
