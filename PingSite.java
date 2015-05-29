@@ -4,7 +4,7 @@
  */
 public class PingSite
 {
-	private final String name, address;
+	private final String NAME, ADDRESS;
 	private double avgLatency, latencyStdDeviation;
 	private int deviationTolerance;
 	
@@ -18,29 +18,29 @@ public class PingSite
 	 */
 	public PingSite(String siteName, String siteAddress, double siteAvgLatency, double siteLatencyStdDeviation, int siteDeviationTolerance)
 	{
-		name = siteName;
-		address = siteAddress;
+		NAME = siteName;
+		ADDRESS = siteAddress;
 		avgLatency = siteAvgLatency;
 		latencyStdDeviation = siteLatencyStdDeviation;
 		deviationTolerance = siteDeviationTolerance;
 	}
 
 	/**
-	 * Gets the name of the site.
+	 * Gets the NAME of the site.
 	 * @return The name of the site
 	 */
 	public String getName()
 	{
-		return name;
+		return NAME;
 	}
 
 	/**
-	 * Gets the address of the site.
+	 * Gets the ADDRESS of the site.
 	 * @return The address of the site
 	 */
 	public String getAddress()
 	{
-		return address;
+		return ADDRESS;
 	}
 
 	/**

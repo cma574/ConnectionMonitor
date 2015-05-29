@@ -27,7 +27,7 @@ public class MonitorApp
     {
 		ArrayList<PingThread> pingThreads = new ArrayList<>();
 
-		DBAccessHandler dbAccessHandler = new DBAccessHandler();
+		DBAccessHandler dbAccessHandler;
 		Emailer emailer;
 		EmailReportHandler emailReportHandler;
 		
@@ -40,8 +40,7 @@ public class MonitorApp
 		
 		try
 		{
-			dbAccessHandler.initDBConnection();
-			emailPropStream = new FileInputStream("Emailer.properties");
+			emailPropStream = new FileInputStream("DBEmailer.properties");
 			pingPropStream = new FileInputStream("PingSites.properties");
 			
 			try
@@ -51,10 +50,15 @@ public class MonitorApp
 				pingSitesConfig.load(pingPropStream);
 				//If anything before this point throws an IOException the next section will be skipped.
 				
-				String emailAddress = emailerConfig.getProperty("Email");
-				String emailPwd = emailerConfig.getProperty("Password");
+				String dbName = emailerConfig.getProperty("DBName");
+				String dbUser = emailerConfig.getProperty("DBUser");
+				String dbPwd = emailerConfig.getProperty("DBPassword");
+				String emailAddress = emailerConfig.getProperty("EmailAddress");
+				String emailPwd = emailerConfig.getProperty("EmailPassword");
 				String notifyList = emailerConfig.getProperty("NotifyList");
 				String emergencyNotifyList = emailerConfig.getProperty("EmergencyNotifyList");
+				dbAccessHandler = new DBAccessHandler(dbName, dbUser, dbPwd);
+				dbAccessHandler.initDBConnection();
 				emailer = new Emailer(emailAddress, emailPwd);
 				
 				emailReportHandler = new EmailReportHandler(emailer, dbAccessHandler, notifyList, emergencyNotifyList);
@@ -76,20 +80,21 @@ public class MonitorApp
 					if(isShutDown)
 						shutDownThreads(pingThreads);
 				}
+				
+				dbAccessHandler.closeDBConnection();
 			}
-			catch(IOException ioEx)
+			catch(IOException | ClassNotFoundException | SQLException e)
 			{
-				ioEx.printStackTrace();
+				e.printStackTrace();
 			}
 			finally
 			{
 				//Closing InputStreams and DataBase Connection
 				closeInputStream(pingPropStream);
 				closeInputStream(emailPropStream);
-				dbAccessHandler.closeDBConnection();
 			}
 		}
-		catch(FileNotFoundException | ClassNotFoundException | SQLException e) //If these Exceptions are thrown then nothing was successfully opened
+		catch(FileNotFoundException e) //If these Exceptions are thrown then nothing was successfully opened
 		{
 			e.printStackTrace();
 		}

@@ -1,12 +1,3 @@
-#Author: Cory Ma
-#Creation Date: 1/27/15
-#Due Date: 4/9/15
-#Course: CSC411
-#Professor: Dr. Frye
-#Assignment: Project
-#Filename: InitConfigs.sh
-#Purpose: Script file with information to generate templates for config files.
-
 fileCreated=false
 
 if [ ! -s PingSites.properties ]; then
@@ -15,12 +6,15 @@ if [ ! -s PingSites.properties ]; then
     fileCreated=true
 fi
 
-if [ ! -s Emailer.properties ]; then
-    echo 'Email='>> Emailer.properties
-    echo 'Password='>>Emailer.properties
-    echo 'NotifyList='>>Emailer.properties
-    echo 'EmergencyNotifyList='>>Emailer.properties
-    echo 'Emailer.properties created, please fill in template before running ConnectionMonitor.'
+if [ ! -s DBEmailer.properties ]; then
+	echo 'DBName='>>DBEmailer.properties
+    echo 'DBUser='>>DBEmailer.properties
+    echo 'DBPassword='>>DBEmailer.properties
+    echo 'EmailAddress='>>DBEmailer.properties
+    echo 'EmailPassword='>>DBEmailer.properties
+    echo 'NotifyList='>>DBEmailer.properties
+    echo 'EmergencyNotifyList='>>DBEmailer.properties
+    echo 'DBEmailer.properties created, please fill in template before running ConnectionMonitor.'
     fileCreated=true
 fi
 

@@ -13,11 +13,11 @@ import java.util.Locale;
  */
 public final class MoreDateFunctions
 {
-	private final static SimpleDateFormat dateFormat = new SimpleDateFormat("yyMMdd", Locale.US);
-    private final static SimpleDateFormat slashDateFormat = new SimpleDateFormat("MM/dd/yy", Locale.US);
-    private final static SimpleDateFormat timestampFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss a", Locale.US);
-    private final static SimpleDateFormat fmTimestampFormat = new SimpleDateFormat("yyyy/MM/dd hh:mm:ss a", Locale.US);
-    private final static SimpleDateFormat fileTimestampFormat = new SimpleDateFormat("yyMMdd_kkmm", Locale.US);
+	private final static SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyMMdd", Locale.US);
+    private final static SimpleDateFormat SLASH_DATE_FORMAT = new SimpleDateFormat("MM/dd/yy", Locale.US);
+    private final static SimpleDateFormat TIMESTAMP_FORMAT = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss a", Locale.US);
+    private final static SimpleDateFormat FM_TIMESTAMP_FORMAT = new SimpleDateFormat("yyyy/MM/dd hh:mm:ss a", Locale.US);
+    private final static SimpleDateFormat FILE_TIMESTAMP_FORMAT = new SimpleDateFormat("yyMMdd_kkmm", Locale.US);
 	
 	
     /**
@@ -108,7 +108,7 @@ public final class MoreDateFunctions
 	 */
 	public static String formatDateAsYYMMDD(Date formatDate)
 	{
-		return dateFormat.format(formatDate);
+		return DATE_FORMAT.format(formatDate);
 	}
 	
 	/**
@@ -118,7 +118,7 @@ public final class MoreDateFunctions
 	 */
 	public static String formatDateAsTimestamp(Date formatDate)
 	{
-		return timestampFormat.format(formatDate);
+		return TIMESTAMP_FORMAT.format(formatDate);
 	}
 	
 	/**
@@ -128,7 +128,7 @@ public final class MoreDateFunctions
 	 */
 	public static String formatDateAsSlashMMDDYY(Date formatDate)
 	{
-		return slashDateFormat.format(formatDate);
+		return SLASH_DATE_FORMAT.format(formatDate);
 	}
 	
 	/**
@@ -137,7 +137,7 @@ public final class MoreDateFunctions
 	 */
     public static String getTodayYYMMDD()
     {
-        return dateFormat.format(new Date());
+        return DATE_FORMAT.format(new Date());
     }
 
     /**
@@ -146,7 +146,7 @@ public final class MoreDateFunctions
 	 */
     public static String getTodaySlashMMDDYY()
     {
-        return slashDateFormat.format(new Date());
+        return SLASH_DATE_FORMAT.format(new Date());
     }
     
     /**
@@ -155,7 +155,7 @@ public final class MoreDateFunctions
      */
     public static String getNowTimestamp()
     {
-        return timestampFormat.format(new Date());
+        return TIMESTAMP_FORMAT.format(new Date());
     }
     
     /**
@@ -164,7 +164,7 @@ public final class MoreDateFunctions
      */
     public static String getNowFMTimestamp()
     {
-        return fmTimestampFormat.format(new Date());
+        return FM_TIMESTAMP_FORMAT.format(new Date());
     }
     
     /**
@@ -173,7 +173,7 @@ public final class MoreDateFunctions
      */
     public static String getNowFileTimestamp()
     {
-        return fileTimestampFormat.format(new Date());
+        return FILE_TIMESTAMP_FORMAT.format(new Date());
     }
 
     /**
@@ -183,6 +183,6 @@ public final class MoreDateFunctions
 	 */
     public static Date getDateFromYYMMDD(String dateString) throws ParseException
     {
-        return dateFormat.parse(dateString);
+        return DATE_FORMAT.parse(dateString);
     }
 }

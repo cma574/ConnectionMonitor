@@ -16,18 +16,33 @@ import java.util.Date;
 public class DBAccessHandler
 {
 	//JDBC Driver Name and Database URL
-	private final String JDBC_DRIVER = "com.mysql.jdbc.Driver";  
-	private final String DB_URL = "jdbc:mysql://localhost/cma574_db";
+	private final String JDBC_DRIVER;  
+	private final String DB_URL;
 	
 	//Database Credentials
-	private final String USER = "cma574";
-	private final String PASSWORD = "heGep54uZ";
+	private final String USER;
+	private final String PASSWORD;
 	
 	//Table Names
 	private final String LOG_TABLE = "log";
 	private final String SITE_TABLE = "site";
 	
 	private Connection dbConnection;
+	
+	/**
+	 * Constructor.
+	 * @param dbName         Name of the database
+	 * @param dbUser         User name for database
+	 * @param dbPassword     Password for database
+	 */
+	public DBAccessHandler(String dbName, String dbUser, String dbPassword)
+	{
+		DB_URL = "jdbc:mysql://localhost/" + dbName;
+		USER = dbUser;
+		PASSWORD = dbPassword;
+		
+		JDBC_DRIVER = "com.mysql.jdbc.Driver";
+	}
 	
 	/**
 	 * Initializes the DataBase connection by loading the driver and establishing the connection.

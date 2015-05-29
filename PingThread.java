@@ -14,7 +14,7 @@ public class PingThread extends Thread
 {
 	//Variables for ping command
 	private String command;
-	private final int msPerPing = 2000;
+	private final int MS_PER_PING = 2000;
 	
 	private PingSite pingSite;
 	private PingHandler pingHandler;
@@ -37,7 +37,7 @@ public class PingThread extends Thread
 	
 	/**
 	 * Overridden Thread run() method. This will loop until the isShutDown flag is set, pinging repeatedly. For
-	 * each successful ping it will sleep for time equal to msPerPing milliseconds. This is done to limit the checking
+	 * each successful ping it will sleep for time equal to MS_PER_PING milliseconds. This is done to limit the checking
 	 * somewhat. Unsuccessful pinging takes longer for the system command to return so a delay isn't necessary.
 	 */
 	@Override
@@ -48,7 +48,7 @@ public class PingThread extends Thread
 			try
 			{
 				if(pingSite())
-					sleep(msPerPing);
+					sleep(MS_PER_PING);
 			}
 			catch(IOException | InterruptedException | SQLException e)
 			{

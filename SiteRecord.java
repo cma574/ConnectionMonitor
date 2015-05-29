@@ -6,10 +6,10 @@ import java.sql.Timestamp;
  */
 public class SiteRecord
 {
-	private final String siteName;
-	private final int statusNum;
-	private final Timestamp pingTime;
-	private final double latency;
+	private final String SITE_NAME;
+	private final int STATUS_NUM;
+	private final Timestamp PING_TIME;
+	private final double LATENCY;
 	
 	/**
 	 * Constructor.
@@ -20,23 +20,23 @@ public class SiteRecord
 	 */
 	public SiteRecord(String name, int siteStatus, Timestamp time, double siteLatency)
 	{
-		siteName = name;
-		statusNum = siteStatus;
-		pingTime = time;
-		latency = siteLatency;
+		SITE_NAME = name;
+		STATUS_NUM = siteStatus;
+		PING_TIME = time;
+		LATENCY = siteLatency;
 	}
 	
 	/**
-	 * Gets the siteName for the query result.
+	 * Gets the SITE_NAME for the query result.
 	 * @return The name of the site
 	 */
 	public String getSiteName()
 	{
-		return siteName;
+		return SITE_NAME;
 	}
 	
 	/**
-	 * Gets the statusNum for the query result.
+	 * Gets the STATUS_NUM for the query result.
 	 * @return The status number of the ping command:
 	 * 	        1 - Site unreachable
 	 *          2 - Site reachable again
@@ -44,24 +44,24 @@ public class SiteRecord
 	 */
 	public int getStatusNum()
 	{
-		return statusNum;
+		return STATUS_NUM;
 	}
 	
 	/**
-	 * Gets the pingTime for the query result.
+	 * Gets the PING_TIME for the query result.
 	 * @return The time the ping command
 	 */
 	public Timestamp getPingTime()
 	{
-		return pingTime;
+		return PING_TIME;
 	}
 	
 	/**
-	 * Gets latency for the query result.
+	 * Gets LATENCY for the query result.
 	 * @return The latency of the ping command
 	 */
 	public double getLatency()
 	{
-		return latency;
+		return LATENCY;
 	}
 }

@@ -14,8 +14,8 @@ public class EmailReportHandler
 {
 	private Emailer emailer;
 	private DBAccessHandler dbAccessHandler;
-	private final String notifyList, emergencyNotifyList; 
-	private final int numHoursForReport;
+	private final String NOTIFY_LIST, EMERGENCY_NOTIFY_LIST; 
+	private final int HOURS_FOR_REPORT;
 	private volatile int numEmergencyReportSites;
 	private ArrayList<String> activePingSiteNames;
 	private Date startEmergency, lastRegularReport;
@@ -31,9 +31,9 @@ public class EmailReportHandler
 	{
 		emailer = emailSender;
 		dbAccessHandler = dbHandler;
-		notifyList = emailList;
-		emergencyNotifyList = emergencyEmailList;
-		numHoursForReport = 6;
+		NOTIFY_LIST = emailList;
+		EMERGENCY_NOTIFY_LIST = emergencyEmailList;
+		HOURS_FOR_REPORT = 6;
 		numEmergencyReportSites = 0;
 		activePingSiteNames = new ArrayList<>();
 		lastRegularReport = MoreDateFunctions.roundToHour(new Date());
@@ -55,7 +55,7 @@ public class EmailReportHandler
 	public synchronized void checkReportSend() throws SQLException
 	{
 		Date currentDate = new Date();
-		if(MoreDateFunctions.timeDiffInHours(currentDate, lastRegularReport) >= numHoursForReport)
+		if(MoreDateFunctions.timeDiffInHours(currentDate, lastRegularReport) >= HOURS_FOR_REPORT)
 			sendRegularReport(MoreDateFunctions.roundToHour(currentDate));
 	}
 	
@@ -118,7 +118,7 @@ public class EmailReportHandler
 		
 		message = "ConnectionMonitor Report for " + MoreDateFunctions.formatDateAsTimestamp(currentDate) + "\n\n" + message;
 		
-		emailer.sendMessage(notifyList, subject, message);
+		emailer.sendMessage(NOTIFY_LIST, subject, message);
 		lastRegularReport = currentDate;
 	}
 	
@@ -142,6 +142,6 @@ public class EmailReportHandler
 						siteRecord.getSiteName() + " became reachable again.\n";
 		}
 		
-		emailer.sendMessage(emergencyNotifyList, subject, message);
+		emailer.sendMessage(EMERGENCY_NOTIFY_LIST, subject, message);
 	}
 }
