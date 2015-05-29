@@ -117,7 +117,8 @@ public class EmailReportHandler
 		if(message.isEmpty())
 			message = "Nothing to report.";
 		
-		message = "ConnectionMonitor Report for " + MoreDateFunctions.formatDateAsTimestamp(currentDate) + "\n\n" + message;
+		message = "ConnectionMonitor Report for " + MoreDateFunctions.formatDateAsTimestamp(lastRegularReport) + " to " + 
+				MoreDateFunctions.formatDateAsTimestamp(currentDate) + "\n\n" + message;
 		
 		emailer.sendMessage(NOTIFY_LIST, subject, message);
 		lastRegularReport = currentDate;
