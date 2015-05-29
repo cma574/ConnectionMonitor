@@ -1,374 +1,138 @@
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Locale;
+import java.sql.SQLException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-import org.my.libraries.MoreDateFunctions;
-import org.my.libraries.MoreMath;
-
+/**
+ * Thread that runs the system's ping command, then parses and passes the results to
+ * PingHandler for processing.
+ * @author Cory Ma
+ */
 public class PingThread extends Thread
 {
 	//Variables for ping command
-	private String pingSite, command;
-	private int msPerPing = 1000;
+	private String command;
+	private final int msPerPing = 2000;
 	
-	//Variables for reporting
-	private String dailyReport;
-	private double averageLatency, latencyStdDev, maxLatency;
-	private int deviationTolerance, reportHour, numOutages;
-	private int outageEmergency = 30; //Seconds of outage before emergency contact
-	private boolean wasSiteUnreachable; //Flag for whether the last ping was unreachable
-	private boolean wasEmergencyNotified; //Flag for whether contact was already done
-	private Date outageStart;
-	private FileWriter logWriter;
+	private PingSite pingSite;
+	private PingHandler pingHandler;
 	
-	//Variables for recalculating standard deviation
-	private ArrayList<Double> latencyValues;
-	private Date lastRecalculated;
-	private int hoursForUpdate = 6;
-	private int sampleSize = 4000;
+	private boolean isShutDown = false;
 	
-	//Consructor
-	PingThread(String site, double avrgLatency, double stdDev, int tolerance)
+	/**
+	 * Constructor.
+	 * @param site        PingSite to perform pings on
+	 * @param handler     PingHandler to process results of ping
+	 */
+	public PingThread(PingSite site, PingHandler handler)
 	{
 		pingSite = site;
-		averageLatency = avrgLatency;
-		latencyStdDev = stdDev;
-		deviationTolerance = tolerance;
-		wasSiteUnreachable = false;
-		wasEmergencyNotified = false;
-		dailyReport = "";
-		latencyValues = new ArrayList<Double>(sampleSize);
 		
 		//Set command to perform single ping -c 1 works with Linux/Mac
-		command = "ping -c 1 " + site;
-		
-		lastRecalculated = new Date();
-		
-		File logsDir = new File("logs");
-		logsDir.mkdir();
-		File logFile = new File(logsDir, site + "_log.txt");
-		
-		try
-		{
-			logWriter = new FileWriter(logFile, true);
-		}
-		catch(Exception e)
-		{
-			e.printStackTrace(System.err);
-			System.exit(-1);
-		}
+		command = "ping -c 1 " + pingSite.getAddress();
+		pingHandler = handler;
 	}
 	
-	public String getPingSite()
-	{
-		return pingSite;
-	}
-
-	public double getAverageLatency()
-	{
-		return averageLatency;
-	}
-
-	public double getLatencyStdDev()
-	{
-		return latencyStdDev;
-	}
-
-	public int getDeviationTolerance()
-	{
-		return deviationTolerance;
-	}
-
-	public Date getLastRecalculated()
-	{
-		return lastRecalculated;
-	}
-
-	public int getHoursForUpdate()
-	{
-		return hoursForUpdate;
-	}
-
-	public int getSampleSize()
-	{
-		return sampleSize;
-	}
-	
-	public String getDailyReport()
-	{
-		return dailyReport;
-	}
-	
-	public double getMaxLatency()
-	{
-		return maxLatency;
-	}
-
-	public int getNumOutages()
-	{
-		return numOutages;
-	}
-
-	public Date getOutageStart()
-	{
-		return outageStart;
-	}
-
-	public int getReportHour()
-	{
-		return reportHour;
-	}
-
-	public int getOutageEmergency()
-	{
-		return outageEmergency;
-	}
-
-	public boolean getWasSiteUnreachable()
-	{
-		return wasSiteUnreachable;
-	}
-	
-	public boolean getWasEmergencyNotified()
-	{
-		return wasEmergencyNotified;
-	}
-	
-	public void setPingSite(String site)
-	{
-		pingSite = site;
-	}
-
-	public void setAverageLatency(double avrgLatency)
-	{
-		averageLatency = avrgLatency;
-	}
-
-	public void setLatencyStdDev(double stdDev)
-	{
-		latencyStdDev = stdDev;
-	}
-
-	public void setDeviationTolerance(int tolerance)
-	{
-		deviationTolerance = tolerance;
-	}
-	
-	public void setLastRecalculated(Date recalculatedDate)
-	{
-		lastRecalculated = recalculatedDate;
-	}
-
-	public void setHoursForUpdate(int hours)
-	{
-		hoursForUpdate = hours;
-	}
-
-	public void setSampleSize(int smplSize)
-	{
-		sampleSize = smplSize;
-	}
-	
-	public void setDailyReport(String message)
-	{
-		dailyReport = message;
-	}
-	
-	public void setMaxLatency(double max)
-	{
-		maxLatency = max;
-	}
-
-	public void setNumOutages(int numberOutages)
-	{
-		numOutages = numberOutages;
-	}
-
-	public void setOutageStart(Date start)
-	{
-		outageStart = start;
-	}
-
-	public void setReportHour(int hour)
-	{
-		reportHour = hour;
-	}
-
-	public void setOutageEmergency(int emergencyLimit)
-	{
-		outageEmergency = emergencyLimit;
-	}
-
-	public void setWasSiteUnreachable(boolean unreachable)
-	{
-		wasSiteUnreachable = unreachable;
-	}
-	
-	public void setWasEmergencyNotified(boolean contacted)
-	{
-		wasEmergencyNotified = contacted;
-	}
-	
-	public void appendDailyReport(String message)
-	{
-		if(message.isEmpty())
-			setDailyReport("");
-		else
-			setDailyReport(dailyReport + "\n" + message);
-	}
-
+	/**
+	 * Overridden Thread run() method. This will loop until the isShutDown flag is set, pinging repeatedly. For
+	 * each successful ping it will sleep for time equal to msPerPing milliseconds. This is done to limit the checking
+	 * somewhat. Unsuccessful pinging takes longer for the system command to return so a delay isn't necessary.
+	 */
 	@Override
 	public void run()
 	{
-		while(true)
+		while(!isShutDown)
 		{
 			try
 			{
 				if(pingSite())
 					sleep(msPerPing);
 			}
-			catch(Exception e)
+			catch(IOException | InterruptedException | SQLException e)
 			{
-				e.printStackTrace(System.err);
+				e.printStackTrace();
 			}
 		}
+		pingHandler.closeFileWriter();
+	}
+	
+	/**
+	 * Sets the isShutDown flag to insure the thread shuts down cleanly.
+	 */
+	public void shutDown()
+	{
+		isShutDown = true;
 	}
 
-	private boolean pingSite() throws IOException, InterruptedException
+	/**
+	 * Executes the ping command, parses the results, then passes them to the PingHandler.
+	 * @return true if the site was reachable
+	 * @throws IOException
+	 * @throws InterruptedException
+	 * @throws SQLException
+	 */
+	private boolean pingSite() throws IOException, InterruptedException, SQLException
 	{
 		String processInput = null;
+		String pingIP = "";
 		double pingLatency = -1;
-		String pingReturnSite = "";
 		
-		Process pingProcess = java.lang.Runtime.getRuntime().exec(command); //Forks process and executes command
+        Process pingProcess = java.lang.Runtime.getRuntime().exec(command); //Forks process and executes command
 		BufferedReader stdInput = new BufferedReader(new InputStreamReader(pingProcess.getInputStream()));
 		int returnVal = pingProcess.waitFor(); //Waits for return from ping command
 		boolean reachable = (returnVal == 0);
-		
-		int count = 0;
 		while(((processInput = stdInput.readLine()) != null))
-	    {
-			if(count == 0)
+		{
+			if(pingIP.isEmpty())
 			{
-				//IP address taken from first line in stream
-				pingReturnSite = parsePingIP(processInput, reachable);
+				pingIP = parsePingIP(processInput);
 			}
-			else if(reachable && count == 1)
+			if(reachable && pingLatency == -1)
 			{
-				//Latency value taken from first line in stream
 				pingLatency = parsePingLatency(processInput);
 			}
-			count++;
 	    }
-		handlePing(reachable, pingReturnSite, pingLatency);
+		pingHandler.handlePing(reachable, pingIP, pingLatency);
 		return reachable;
 	}
 	
+	/**
+	 * Parses the IP address from output line from the ping.
+	 * @param pingString     Output line from the ping
+	 * @return The IP address if successful, otherwise an empty String
+	 */
+	private String parsePingIP(String pingString)
+	{
+		String pingIP = "";
+		Pattern ipPattern = Pattern.compile(".*\\b(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})\\b.*");
+		Matcher ipMatcher = ipPattern.matcher(pingString);
+		if(ipMatcher.find())
+		{
+			pingIP = ipMatcher.group(1);
+		}
+		return pingIP;
+	}
+	
+	/**
+	 * Parses the latency from an output line from the ping.
+	 * @param pingString     Output line from the ping
+	 * @return The latency if successful, otherwise -1
+	 */
 	private double parsePingLatency(String pingString)
 	{
 		double pingLatency = -1;
-		int latencySubstrStart, latencySubstrEnd;
-		String latencySubstr;
+		Pattern latencyPattern = Pattern.compile(".*time=(\\d{1,6}.\\d{1,3}) ms");
+		Matcher latencyMatcher = latencyPattern.matcher(pingString);
+		String latencyString;
 		
-		latencySubstrStart = pingString.indexOf("time=") + 5;
-		latencySubstrEnd = pingString.indexOf(" ms");
-		if(latencySubstrStart > 4 || latencySubstrEnd > -1)
+		if(latencyMatcher.find())
 		{
-			latencySubstr = pingString.substring(latencySubstrStart, latencySubstrEnd);
-			pingLatency = Double.parseDouble(latencySubstr);
+			latencyString = latencyMatcher.group(1);
+			pingLatency = Double.parseDouble(latencyString);
 		}
 		
 		return pingLatency;
-	}
-	
-	private String parsePingIP(String pingString, boolean reachable)
-	{
-		String pingIP = pingString;
-		int ipSubstrStart, ipSubstrEnd;
-		
-		ipSubstrStart = pingString.indexOf("(") + 1;
-		ipSubstrEnd = pingString.indexOf(")");
-		if(ipSubstrStart > 0 || ipSubstrEnd > -1)
-			pingIP = pingString.substring(ipSubstrStart, ipSubstrEnd);
-		
-		return pingIP;
-	}
-
-	private void handlePing(boolean reachable, String pingIP, double pingLatency) throws IOException
-	{
-		Date currentDate = new Date();
-		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS a", Locale.US);
-		
-		if(reachable)
-		{
-			if(getWasSiteUnreachable())
-			{
-				String message = dateFormat.format(currentDate) + ": " + getPingSite() + " (" + pingIP + ") is now reachable";
-				writeToLog(message, "\n");
-				if(getWasEmergencyNotified())
-				{
-					System.out.println("Emergency over in " + getPingSite() + " at " + dateFormat.format(currentDate));
-					//E-mail report
-				}
-				resetEmergencyReporting();
-			}
-			if(pingLatency > (getAverageLatency() + (getLatencyStdDev() * getDeviationTolerance())))
-			{
-				String message = dateFormat.format(currentDate) + ": " + getPingSite() + " (" + pingIP + ") is reachable but slow with " + Double.toString(pingLatency) + " ms latency"; 
-				writeToLog(message, "\n");
-			}
-			
-			if(MoreMath.modulo((int)MoreDateFunctions.timeDiffInHours(currentDate, getLastRecalculated()), 24) >= getHoursForUpdate() )
-			{
-				latencyValues.add(pingLatency);
-				if(latencyValues.size() >= getSampleSize())
-				{
-					setAverageLatency(MoreMath.mean(latencyValues));
-					setLatencyStdDev(MoreMath.stdDev(latencyValues));
-					setLastRecalculated(currentDate);
-					latencyValues.clear();
-					String message = dateFormat.format(currentDate) + ": " + getPingSite() + " - " + "Average Latency is adjusted to " + Double.toString(getAverageLatency()) +
-							" and Standard Deviation is adjusted to " + Double.toString(getLatencyStdDev());
-					writeToLog(message, "\n");
-				}
-			}
-		}
-		else
-		{
-			String message = dateFormat.format(currentDate) + ": " + getPingSite() + " (" + pingIP + ") is not reachable";
-			writeToLog(message, "\n");
-			if(getWasSiteUnreachable())
-			{
-				if((MoreDateFunctions.timeDiffInSeconds(currentDate, getOutageStart()) > getOutageEmergency()) && !getWasEmergencyNotified())
-				{
-					System.out.println("Emergency in " + getPingSite() + " at " + dateFormat.format(currentDate));
-					setWasEmergencyNotified(true);
-				}
-			}
-			else
-			{
-				setWasSiteUnreachable(true);
-				setOutageStart(currentDate);
-				//Increment numTimesDown for hour
-			}
-		}
-	}
-	
-	private void resetEmergencyReporting()
-	{
-		setWasSiteUnreachable(false);
-		setWasEmergencyNotified(false);
-	}
-	
-	private void writeToLog(String message, String seperator) throws IOException
-	{
-		logWriter.write(message + seperator);
-		logWriter.flush();
 	}
 }

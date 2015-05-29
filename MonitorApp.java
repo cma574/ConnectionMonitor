@@ -1,62 +1,210 @@
+import java.io.BufferedReader;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Properties;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
-
+/**
+ * The main application area. This will create the objects and launch the threads needed for 
+ * ConnectionMonitor to run.
+ * @author Cory Ma
+ */
 public class MonitorApp
 {
+	/**
+	 * Main area of application, gets information to create objects and launch threads.
+	 * @param args     Command line arguments to program
+	 */
 	public static void main(String[] args)
     {
-		Properties config = new Properties();
-		InputStream input = null;
-		JSONObject configJSON;
+		ArrayList<PingThread> pingThreads = new ArrayList<>();
+
+		DBAccessHandler dbAccessHandler = new DBAccessHandler();
+		Emailer emailer;
+		EmailReportHandler emailReportHandler;
+		
+		Properties pingSitesConfig = new Properties();
+		Properties emailerConfig = new Properties();
+		InputStream emailPropStream;
+		InputStream pingPropStream;
+		
+		boolean isShutDown = false;
 		
 		try
 		{
-			input = new FileInputStream("PingSites.properties");
-	 
-			//Load a properties file from input
-			config.load(input);
-	 
-			Enumeration<?> configEnum = config.propertyNames();
-			while (configEnum.hasMoreElements())
+			dbAccessHandler.initDBConnection();
+			emailPropStream = new FileInputStream("Emailer.properties");
+			pingPropStream = new FileInputStream("PingSites.properties");
+			
+			try
 			{
-				//Gets key from enumeration from properties file
-				String key = (String) configEnum.nextElement();
-				configJSON = new JSONObject(config.getProperty(key));
-				String configSite = configJSON.getString("site");
-				System.out.println(configSite);
-				double configAverage = configJSON.getDouble("average");
-				System.out.println(configAverage);
-				double configStdDev = configJSON.getDouble("stddev"); 
-				System.out.println(configStdDev);
-				int configTolerance = configJSON.getInt("tolerance");
-				System.out.println(configTolerance);
-				//If there was an error in any of these JSON requests an exception will be thrown before it hits the constructor
-				new PingThread(configSite, configAverage, configStdDev, configTolerance).start();
-			}
-		}
-		catch (Exception ex)
-		{
-			ex.printStackTrace();
-		}
-		finally
-		{
-			if (input != null)
-			{
-				try
+				//Load properties files from FileInputStreams
+				emailerConfig.load(emailPropStream);
+				pingSitesConfig.load(pingPropStream);
+				//If anything before this point throws an IOException the next section will be skipped.
+				
+				String emailAddress = emailerConfig.getProperty("Email");
+				String emailPwd = emailerConfig.getProperty("Password");
+				String notifyList = emailerConfig.getProperty("NotifyList");
+				String emergencyNotifyList = emailerConfig.getProperty("EmergencyNotifyList");
+				emailer = new Emailer(emailAddress, emailPwd);
+				
+				emailReportHandler = new EmailReportHandler(emailer, dbAccessHandler, notifyList, emergencyNotifyList);
+				
+				ArrayList<PingSite> pingSites = getPingSitesFromConfig(pingSitesConfig);
+				
+				for(PingSite pingSite : pingSites)
 				{
-					input.close();
+					pingThreads.add(new PingThread(pingSite, new PingHandler(pingSite, emailReportHandler, dbAccessHandler)));
+					dbAccessHandler.insertSiteEntry(pingSite.getName(), pingSite.getAddress());
+					emailReportHandler.addSiteNameToList(pingSite.getName());;
 				}
-				catch (IOException e)
+				
+				startThreads(pingThreads);
+				
+				while(!isShutDown && pingThreads.size() != 0)
 				{
-					e.printStackTrace();
+					isShutDown = promptShutDownInput();
+					if(isShutDown)
+						shutDownThreads(pingThreads);
 				}
 			}
+			catch(IOException ioEx)
+			{
+				ioEx.printStackTrace();
+			}
+			finally
+			{
+				//Closing InputStreams and DataBase Connection
+				closeInputStream(pingPropStream);
+				closeInputStream(emailPropStream);
+				dbAccessHandler.closeDBConnection();
+			}
+		}
+		catch(FileNotFoundException | ClassNotFoundException | SQLException e) //If these Exceptions are thrown then nothing was successfully opened
+		{
+			e.printStackTrace();
 		}
     }
+	
+	/**
+	 * Creates a list of PingSites using information parsed from a JSON format String stored in a config file.
+	 * @param pingSitesConfig     Opened config containing information to create PingSites
+	 * @return The list of PingSites created from the config file
+	 */
+	private static ArrayList<PingSite> getPingSitesFromConfig(Properties pingSitesConfig)
+	{
+		ArrayList<PingSite> pingSites = new ArrayList<>();
+		Enumeration<?> pingSitesConfigEnum = pingSitesConfig.propertyNames();
+		
+		while(pingSitesConfigEnum.hasMoreElements())
+		{
+			try
+			{
+				//Gets key from enumeration from properties file
+				String key = (String)pingSitesConfigEnum.nextElement();
+				JSONObject pingSitesConfigJSON = new JSONObject(pingSitesConfig.getProperty(key));
+				String configAddress = pingSitesConfigJSON.getString("address");
+				System.out.println(configAddress);
+				double configAverage = pingSitesConfigJSON.getDouble("average");
+				System.out.println(configAverage);
+				double configStdDev = pingSitesConfigJSON.getDouble("stddev"); 
+				System.out.println(configStdDev);
+				int configTolerance = pingSitesConfigJSON.getInt("tolerance");
+				System.out.println(configTolerance);
+				//If there was an error in the JSON request an exception will be thrown before it hits the constructors, then it will go for the next properties entry
+				pingSites.add(new PingSite(key, configAddress, configAverage, configStdDev, configTolerance));
+			}
+			catch(JSONException jsonEx)
+			{
+				jsonEx.printStackTrace();
+			}
+		}
+		
+		return pingSites;
+	}
+	
+	/**
+	 * Runs the start method on each PingThread in a list.
+	 * @param pingThreads     List to iterate through
+	 */
+	private static void startThreads(ArrayList<PingThread> pingThreads)
+	{
+		for(Thread pingThread : pingThreads)
+		{
+			pingThread.start();
+		}
+	}
+	
+	/**
+	 * Prompts user for shut down command of Q or q and loops until it receives it.
+	 * @return true if the application should start shutting down gracefully
+	 */
+	private static boolean promptShutDownInput()
+	{
+		String consoleInput;
+		BufferedReader consoleIn = new BufferedReader(new InputStreamReader(System.in));
+		boolean isShutDown = false;
+		
+		try
+		{
+			System.out.println("Please enter Q/q to terminate.");
+			consoleInput = consoleIn.readLine();
+			if(consoleInput.equals("q") || consoleInput.equals("Q"))
+			{
+				isShutDown = true;
+			}
+			consoleIn.close();
+		}
+		catch(IOException ioEx)
+		{
+			ioEx.printStackTrace();
+		}
+		
+		return isShutDown;
+	}
+	
+	/**
+	 * Shuts down each pingThread in a list, then joins them to insure that the program ends gracefully.
+	 * @param pingThreads     List of pingThreads to shutdown
+	 */
+	private static void shutDownThreads(ArrayList<PingThread> pingThreads)
+	{
+		for(PingThread pingThread : pingThreads)
+		{
+			pingThread.shutDown();
+			try
+			{
+				pingThread.join();
+			}
+			catch(InterruptedException iE)
+			{
+				iE.printStackTrace();
+			}
+		}
+	}
+	
+	/**
+	 * Closes an input stream.
+	 * @param closingStream     InputStream to close
+	 */
+	private static void closeInputStream(InputStream closingStream)
+	{
+		try
+		{
+			closingStream.close();
+		}
+		catch(IOException e)
+		{
+			e.printStackTrace();
+		}
+	}
 }

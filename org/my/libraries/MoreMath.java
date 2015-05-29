@@ -2,8 +2,17 @@ package org.my.libraries;
 
 import java.util.ArrayList;
 
+/**
+ * Library of functions related to mathematical operations.
+ * @author Cory Ma
+ */
 public final class MoreMath
 {
+	/**
+	 * Calculates the standard deviation of a list of values.
+	 * @param values     List of values
+	 * @return The standard deviation of the values
+	 */
 	public static double stdDev(ArrayList<Double> values)
 	{
 		double stdDev = 0;
@@ -24,6 +33,11 @@ public final class MoreMath
 		return stdDev;
 	}
 	
+	/**
+	 * Calculates the mean of a list of values.
+	 * @param values     List of values
+	 * @return The mean of the values
+	 */
 	public static double mean(ArrayList<Double> values)
 	{
 		double mean = 0;
@@ -40,6 +54,11 @@ public final class MoreMath
 		return mean;
 	}
 	
+	/**
+	 * Calculates the sum of a list of values.
+	 * @param values     List of values
+	 * @return The sum of the values
+	 */
 	public static double sum(ArrayList<Double> values)
 	{
 		double sum = 0;
@@ -52,7 +71,12 @@ public final class MoreMath
 		return sum;
 	}
 	
-	//Performs modulo with a guaranteed positive result
+	/**
+	 * Calculates a positive modulo of two values.
+	 * @param dividend     Dividend of the calculation
+	 * @param divisor      Divisor of the calculation
+	 * @return The positive modulo of the values
+	 */
 	public static int modulo(int dividend, int divisor)
 	{
 		return (((dividend % divisor) + divisor) % divisor);

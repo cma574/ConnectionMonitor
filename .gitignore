@@ -4,3 +4,4 @@ logs/*
 .classpath
 *.class
 *.properties
+/dbscripts
