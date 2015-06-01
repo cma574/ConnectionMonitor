@@ -1,7 +1,7 @@
 fileCreated=false
 
 if [ ! -s PingSites.properties ]; then
-    echo 'PingSite={"site":"", "average":, "stddev":, "tolerance":3}' >> PingSites.properties
+    echo 'PingSite={"address":"", "average":, "stddev":, "tolerance":3}' >> PingSites.properties
     echo 'PingSites.properties created, please fill in template before running ConnectionMonitor.'
     fileCreated=true
 fi
