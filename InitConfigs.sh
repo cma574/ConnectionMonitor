@@ -15,6 +15,7 @@ if [ ! -s DBEmailer.properties ]; then
     echo 'ReportFrequency='>>DBEmailer.properties
     echo 'NotifyList='>>DBEmailer.properties
     echo 'EmergencyNotifyList='>>DBEmailer.properties
+    echo 'StationName='>>DBEmailer.properties
     echo 'DBEmailer.properties created, please fill in template before running ConnectionMonitor.'
     fileCreated=true
 fi

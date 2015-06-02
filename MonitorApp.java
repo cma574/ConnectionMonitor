@@ -58,11 +58,13 @@ public class MonitorApp
 				int reportFrequency = Integer.parseInt(emailerConfig.getProperty("ReportFrequency"));
 				String notifyList = emailerConfig.getProperty("NotifyList");
 				String emergencyNotifyList = emailerConfig.getProperty("EmergencyNotifyList");
+				String stationName = emailerConfig.getProperty("StationName");
+				
 				dbAccessHandler = new DBAccessHandler(dbName, dbUser, dbPwd);
 				dbAccessHandler.initDBConnection();
 				emailer = new Emailer(emailAddress, emailPwd);
 				
-				emailReportHandler = new EmailReportHandler(emailer, dbAccessHandler, reportFrequency, notifyList, emergencyNotifyList);
+				emailReportHandler = new EmailReportHandler(emailer, dbAccessHandler, reportFrequency, notifyList, emergencyNotifyList, stationName);
 				
 				ArrayList<PingSite> pingSites = getPingSitesFromConfig(pingSitesConfig);
 				
@@ -75,14 +77,17 @@ public class MonitorApp
 				
 				startThreads(pingThreads);
 				
-				while(!isShutDown && pingThreads.size() != 0)
+				BufferedReader consoleIn = new BufferedReader(new InputStreamReader(System.in));
+				
+				while(!isShutDown && pingThreads.size() > 0)
 				{
-					isShutDown = promptShutDownInput();
+					isShutDown = promptShutDownInput(consoleIn);
 					if(isShutDown)
 						shutDownThreads(pingThreads);
 				}
 				
 				dbAccessHandler.closeDBConnection();
+				consoleIn.close();
 			}
 			catch(IOException | ClassNotFoundException | SQLException e)
 			{
@@ -154,10 +159,9 @@ public class MonitorApp
 	 * Prompts user for shut down command of Q or q and loops until it receives it.
 	 * @return true if the application should start shutting down gracefully
 	 */
-	private static boolean promptShutDownInput()
+	private static boolean promptShutDownInput(BufferedReader consoleIn)
 	{
 		String consoleInput;
-		BufferedReader consoleIn = new BufferedReader(new InputStreamReader(System.in));
 		boolean isShutDown = false;
 		
 		try
@@ -168,7 +172,6 @@ public class MonitorApp
 			{
 				isShutDown = true;
 			}
-			consoleIn.close();
 		}
 		catch(IOException ioEx)
 		{

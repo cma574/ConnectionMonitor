@@ -21,7 +21,8 @@ EmailAddress=
 EmailPassword=
 ReportFrequency=
 NotifyList=
-EmergencyNotifyList=</pre>
+EmergencyNotifyList=
+StationName=</pre>
 DBName - Name of the database<br>
 DBUser - User name to access the database<br>
 DBPassword - Password to access the database<br>
@@ -29,7 +30,8 @@ EmailAddress - Email address to send report from. This should be a Gmail address
 EmailPassword - Email address' password<br>
 ReportFrequency - Number of hours between regular reports<br>
 NotifyList - E-mail addresses of people to send regular reports to. Separate each address with a ','.<br>
-emergencyNotifyList - E-mail addresses of people to send emergency reports to, should the site go down for 15 seconds or more. Separate each address with a ','.<br><br>
+EmergencyNotifyList - E-mail addresses of people to send emergency reports to, should the site go down for 15 seconds or more. Separate each address with a ','.<br>
+StationName - Optional setting for use if multiple ConnectionMonitors are implemented. This value with a ' - ' is appended to the beginning of the each email subject.<br><br>
 A MySQL database must be set up with the credentials listed in DBEmailer.properties. Once the database is created, access the database and run the following commands:
 <pre>CREATE TABLE log (pklogid BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT, fksiteid INT, fkstatusid INT, pingtime DATETIME, ipaddress CHAR(15), latency FLOAT);
 CREATE TABLE IF NOT EXISTS site (pksiteid INT NOT NULL PRIMARY KEY AUTO_INCREMENT, name CHAR(15), address CHAR(30));

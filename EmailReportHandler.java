@@ -14,11 +14,12 @@ public class EmailReportHandler
 {
 	private Emailer emailer;
 	private DBAccessHandler dbAccessHandler;
-	private final String NOTIFY_LIST, EMERGENCY_NOTIFY_LIST; 
+	private String notifyList, emergencyNotifyList; 
 	private int reportFrequency;
 	private volatile int numEmergencyReportSites;
 	private ArrayList<String> activePingSiteNames;
 	private Date startEmergency, lastRegularReport;
+	private String stationHeader;
 	
 	/**
 	 * Constructor
@@ -27,17 +28,22 @@ public class EmailReportHandler
 	 * @param emailFrequency         Number of hours between regular reports
 	 * @param emailList              List of email addresses to send regular reports to
 	 * @param emergencyEmailList     List of email addresses to send emergency reports to
+	 * @param stationName            Name of the station, to add to email subjects
 	 */
-	public EmailReportHandler(Emailer emailSender, DBAccessHandler dbHandler, int emailFrequency, String emailList, String emergencyEmailList)
+	public EmailReportHandler(Emailer emailSender, DBAccessHandler dbHandler, int emailFrequency, String emailList, String emergencyEmailList, String stationName)
 	{
 		emailer = emailSender;
 		dbAccessHandler = dbHandler;
-		NOTIFY_LIST = emailList;
-		EMERGENCY_NOTIFY_LIST = emergencyEmailList;
+		notifyList = emailList;
+		emergencyNotifyList = emergencyEmailList;
 		reportFrequency = emailFrequency;
 		numEmergencyReportSites = 0;
 		activePingSiteNames = new ArrayList<>();
 		lastRegularReport = MoreDateFunctions.roundToHour(new Date());
+		if(!stationName.isEmpty())
+			stationHeader = stationName + " - ";
+		else
+			stationHeader = "";
 	}
 	
 	/**
@@ -90,7 +96,7 @@ public class EmailReportHandler
 	 */
 	private synchronized void sendRegularReport(Date currentDate) throws SQLException
 	{
-		String subject = "ConnectionMonitor Regular Report";
+		String subject = stationHeader + "ConnectionMonitor Regular Report";
 		String message = "";
 		for(String siteName : activePingSiteNames)
 		{
@@ -120,7 +126,7 @@ public class EmailReportHandler
 		message = "ConnectionMonitor Report for " + MoreDateFunctions.formatDateAsTimestamp(lastRegularReport) + " to " + 
 				MoreDateFunctions.formatDateAsTimestamp(currentDate) + "\n\n" + message;
 		
-		emailer.sendMessage(NOTIFY_LIST, subject, message);
+		emailer.sendMessage(notifyList, subject, message);
 		lastRegularReport = currentDate;
 	}
 	
@@ -131,7 +137,7 @@ public class EmailReportHandler
 	 */
 	private synchronized void sendEmergencyReport(Date emergencyEndTime) throws SQLException
 	{
-		String subject = "ConnectionMonitor Site Unreachable Notification";
+		String subject = stationHeader + "ConnectionMonitor Site Unreachable Notification";
 		ArrayList<SiteRecord> siteRecords = dbAccessHandler.selectEmergencyReportLog(startEmergency, emergencyEndTime);
 		String message = "";
 		for(SiteRecord siteRecord : siteRecords)
@@ -144,6 +150,6 @@ public class EmailReportHandler
 						siteRecord.getSiteName() + " became reachable again.\n";
 		}
 		
-		emailer.sendMessage(EMERGENCY_NOTIFY_LIST, subject, message);
+		emailer.sendMessage(emergencyNotifyList, subject, message);
 	}
 }
