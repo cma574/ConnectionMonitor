@@ -1,10 +1,10 @@
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
 
+import org.my.libraries.IOUtilities;
 import org.my.libraries.MoreDateFunctions;
 import org.my.libraries.MoreMath;
 
@@ -16,8 +16,6 @@ import org.my.libraries.MoreMath;
 public class PingHandler
 {
 	private PingSite pingSite;
-	private EmailReportHandler emailReportHandler;
-	private DBAccessHandler dbAccessHandler;
 	
 	//Variables for reporting
 	private int outageEmergency = 15; //Seconds of outage before emergency contact is necessary
@@ -35,14 +33,10 @@ public class PingHandler
 	/**
 	 * Constructor.
 	 * @param site             PingSite the object is handling results for
-	 * @param emailHandler     EmailReportHandler to synchronize sending of reports
-	 * @param dbHandler        DBAccessHandler used for inserting log results
 	 */
-	public PingHandler(PingSite site, EmailReportHandler emailHandler, DBAccessHandler dbHandler)
+	public PingHandler(PingSite site)
 	{
 		pingSite = site;
-		emailReportHandler = emailHandler; 
-		dbAccessHandler = dbHandler;
 		
 		wasSiteUnreachable = false;
 		needEmergencyNotification = false;
@@ -67,35 +61,33 @@ public class PingHandler
 	
 	/**
 	 * Determines what actions need to be done based on results of a ping.
-	 * @param reachable       Whether the site was reachable
-	 * @param pingIP          IP parsed out from the ping
-	 * @param pingLatency     Latency of the ping
-	 * @throws IOException
-	 * @throws SQLException
+	 * @param pingResponse       Results of the ping
+	 * @return NO_PROBLEMS by default
+	 * 	        SITE_UNREACHABLE if site is unreachable after outageEmergency seconds have passed with wasSiteUnreachable is set
+	 * 	        SITE_REACHABLE_AGAIN if site is reachable after wasSiteUnreachable is set
+	 * 	        SITE_LATENCY_SLOW if site is reachable but latency is greater than bounds set in config
 	 */
-	public void handlePing(boolean reachable, String pingIP, double pingLatency) throws IOException, SQLException
+	public PingHandlerResponse handlePing(PingResponse pingResponse)
 	{
-		Date currentDate = new Date();
-		emailReportHandler.checkReportSend();
+		PingHandlerResponse response = PingHandlerResponse.NO_PROBLEMS;
+		
+		boolean reachable = pingResponse.getReachable();
+		double pingLatency = pingResponse.getLatency();
+		Date currentDate = pingResponse.getPingTime();
 		
 		if(reachable)
 		{
 			if(wasSiteUnreachable)
 			{
-				String message = MoreDateFunctions.formatDateAsTimestamp(currentDate) + ": " + pingSite.getAddress() + " (" + pingIP + ") is now reachable";
-				writeToLog(message, "\n");
 				if(needEmergencyNotification)
 				{
-					dbAccessHandler.insertLogEntry(pingSite.getName(), 2, currentDate, pingIP, pingLatency);
-					emailReportHandler.decrementNumEmergencyReportSites(currentDate);
+					response = PingHandlerResponse.SITE_REACHABLE_AGAIN;
 				}
 				resetEmergencyReporting();
 			}
-			if(pingLatency > (pingSite.getAvgLatency() + (pingSite.getLatencyStdDeviation() * pingSite.getDeviationTolerance())))
+			else if(pingLatency > (pingSite.getAvgLatency() + (pingSite.getLatencyStdDeviation() * pingSite.getDeviationTolerance())))
 			{
-				String message = MoreDateFunctions.formatDateAsTimestamp(currentDate) + ": " + pingSite.getAddress() + " (" + pingIP + ") is reachable but slow with " + Double.toString(pingLatency) + " ms latency"; 
-				writeToLog(message, "\n");
-				dbAccessHandler.insertLogEntry(pingSite.getName(), 3, currentDate, pingIP, pingLatency);
+				response = PingHandlerResponse.SITE_LATENCY_SLOW;
 			}
 			
 			if(MoreMath.modulo((int)MoreDateFunctions.timeDiffInHours(currentDate, lastRecalculated), 24) >= hoursForUpdate )
@@ -109,15 +101,12 @@ public class PingHandler
 		}
 		else
 		{
-			String message = MoreDateFunctions.formatDateAsTimestamp(currentDate) + ": " + pingSite.getAddress() + " (" + pingIP + ") is not reachable";
-			writeToLog(message, "\n");
 			if(wasSiteUnreachable)
 			{
 				if((MoreDateFunctions.timeDiffInSeconds(currentDate, outageStart) > outageEmergency) && !needEmergencyNotification)
 				{
-					dbAccessHandler.insertLogEntry(pingSite.getName(), 1, currentDate, pingIP, pingLatency);
+					response = PingHandlerResponse.SITE_UNREACHABLE;
 					needEmergencyNotification = true;
-					emailReportHandler.incrementNumEmergencyReportSites(currentDate);
 				}
 			}
 			else
@@ -126,6 +115,8 @@ public class PingHandler
 				outageStart = currentDate;
 			}
 		}
+		
+		return response;
 	}
 	
 	/**
@@ -133,29 +124,21 @@ public class PingHandler
 	 */
 	public void closeFileWriter()
 	{
-		try
-		{
-			logWriter.close();
-		}
-		catch(IOException e)
-		{
-			e.printStackTrace();
-		}
+		IOUtilities.closeCloseable(logWriter);
 	}
 	
 	/**
 	 * Updates information for average latency and standard deviation for a PingSite.
 	 * @param currentDate     Date the update happened for logging
-	 * @throws IOException
 	 */
-	private void updatePingSiteInfo(Date currentDate) throws IOException
+	private void updatePingSiteInfo(Date currentDate)
 	{
 		pingSite.setAvgLatency(MoreMath.mean(latencyValues));
 		pingSite.setLatencyStdDeviation(MoreMath.stdDev(latencyValues));
 		lastRecalculated = currentDate;
 		latencyValues.clear();
-		String message = MoreDateFunctions.formatDateAsTimestamp(currentDate) + ": " + pingSite.getAddress() + " - " + "Average Latency is adjusted to " + Double.toString(pingSite.getAvgLatency()) +
-				" and Standard Deviation is adjusted to " + Double.toString(pingSite.getLatencyStdDeviation());
+		String message = MoreDateFunctions.formatDateAsTimestamp(currentDate) + ": " + pingSite.getAddress() + " - " + "Average Latency is adjusted to " + 
+				Double.toString(pingSite.getAvgLatency()) + " and Standard Deviation is adjusted to " + Double.toString(pingSite.getLatencyStdDeviation());
 		writeToLog(message, "\n");
 	}
 	
@@ -172,11 +155,17 @@ public class PingHandler
 	 * Writes a message to the log.
 	 * @param message       Message to write
 	 * @param separator     Separator to use between messages
-	 * @throws IOException
 	 */
-	private void writeToLog(String message, String separator) throws IOException
+	private void writeToLog(String message, String separator)
 	{
-		logWriter.write(message + separator);
-		logWriter.flush();
+		try
+		{
+			logWriter.write(message + separator);
+			logWriter.flush();
+		}
+		catch(IOException e)
+		{
+			e.printStackTrace();
+		}
 	}
 }

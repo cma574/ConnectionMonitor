@@ -33,7 +33,7 @@ NotifyList - E-mail addresses of people to send regular reports to. Separate eac
 EmergencyNotifyList - E-mail addresses of people to send emergency reports to, should the site go down for 15 seconds or more. Separate each address with a ','.<br>
 StationName - Optional setting for use if multiple ConnectionMonitors are implemented. This value with a ' - ' is appended to the beginning of the each email subject.<br><br>
 A MySQL database must be set up with the credentials listed in DBEmailer.properties. Once the database is created, access the database and run the following commands:
-<pre>CREATE TABLE log (pklogid BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT, fksiteid INT, fkstatusid INT, pingtime DATETIME, ipaddress CHAR(15), latency FLOAT);
+<pre>CREATE TABLE IF NOT EXISTS log (pklogid BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT, fksiteid INT, fkstatusid INT, pingtime DATETIME, ipaddress CHAR(15), latency FLOAT);
 CREATE TABLE IF NOT EXISTS site (pksiteid INT NOT NULL PRIMARY KEY AUTO_INCREMENT, name CHAR(15), address CHAR(30));
 CREATE TABLE IF NOT EXISTS status (pkstatusid INT NOT NULL PRIMARY KEY, statustype CHAR(20));
 INSERT INTO status VALUES (1, "Unreachable");
@@ -42,7 +42,6 @@ INSERT INTO status VALUES (3, "Slow");</pre>
 To run the application, run the ConnectionMonitor.sh script. This will check if the properties files exist and are not empty before compiling the .java files and launching the application. There are no guarantees as to what will happen if the .properties files are not properly populated.<br>
 To terminate the application gracefully type in q or Q then hit Enter.
 ## Planned Future Development
-ConfigManager for reading and writing back to the configs and creating PingSites on the fly<br>
 Encryption for passwords in config files<br>
 Speed between sites<br>
 Dynamic adjustment of report frequency<br>

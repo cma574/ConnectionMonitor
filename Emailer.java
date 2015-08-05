@@ -54,7 +54,7 @@ public class Emailer
         }
 		catch(MessagingException e)
 		{
-            throw new RuntimeException(e);
+            e.printStackTrace();
         }
 	}
     

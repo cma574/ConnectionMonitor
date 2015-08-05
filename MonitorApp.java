@@ -8,6 +8,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Properties;
+import java.util.Vector;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -26,6 +27,7 @@ public class MonitorApp
 	public static void main(String[] args)
     {
 		ArrayList<PingThread> pingThreads = new ArrayList<>();
+		Vector<String> activePingSiteNames = new Vector<String>(); //Tracks all active ping sites for querying
 
 		DBAccessHandler dbAccessHandler;
 		Emailer emailer;
@@ -60,19 +62,19 @@ public class MonitorApp
 				String emergencyNotifyList = emailerConfig.getProperty("EmergencyNotifyList");
 				String stationName = emailerConfig.getProperty("StationName");
 				
-				dbAccessHandler = new DBAccessHandler(dbName, dbUser, dbPwd);
+				dbAccessHandler = new DBAccessHandler(dbName, dbUser, dbPwd, activePingSiteNames);
 				dbAccessHandler.initDBConnection();
 				emailer = new Emailer(emailAddress, emailPwd);
 				
-				emailReportHandler = new EmailReportHandler(emailer, dbAccessHandler, reportFrequency, notifyList, emergencyNotifyList, stationName);
+				emailReportHandler = new EmailReportHandler(emailer, reportFrequency, notifyList, emergencyNotifyList, stationName);
 				
 				ArrayList<PingSite> pingSites = getPingSitesFromConfig(pingSitesConfig);
 				
 				for(PingSite pingSite : pingSites)
 				{
-					pingThreads.add(new PingThread(pingSite, new PingHandler(pingSite, emailReportHandler, dbAccessHandler)));
+					pingThreads.add(new PingThread(pingSite, new PingHandler(pingSite), emailReportHandler, dbAccessHandler));
 					dbAccessHandler.insertSiteEntry(pingSite.getName(), pingSite.getAddress());
-					emailReportHandler.addSiteNameToList(pingSite.getName());;
+					activePingSiteNames.add(pingSite.getName());
 				}
 				
 				startThreads(pingThreads);
@@ -83,7 +85,9 @@ public class MonitorApp
 				{
 					isShutDown = promptShutDownInput(consoleIn);
 					if(isShutDown)
+					{
 						shutDownThreads(pingThreads);
+					}
 				}
 				
 				dbAccessHandler.closeDBConnection();

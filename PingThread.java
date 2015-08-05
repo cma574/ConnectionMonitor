@@ -2,6 +2,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.sql.SQLException;
+import java.util.Date;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -18,6 +19,8 @@ public class PingThread extends Thread
 	
 	private PingSite pingSite;
 	private PingHandler pingHandler;
+	private EmailReportHandler emailReportHandler;
+	private DBAccessHandler dbAccessHandler;
 	
 	private boolean isShutDown = false;
 	
@@ -26,9 +29,11 @@ public class PingThread extends Thread
 	 * @param site        PingSite to perform pings on
 	 * @param handler     PingHandler to process results of ping
 	 */
-	public PingThread(PingSite site, PingHandler handler)
+	public PingThread(PingSite site, PingHandler handler, EmailReportHandler emailHandler, DBAccessHandler dbHandler)
 	{
 		pingSite = site;
+		emailReportHandler = emailHandler;
+		dbAccessHandler = dbHandler;
 		
 		//Set command to perform single ping -c 1 works with Linux/Mac
 		command = "ping -c 1 " + pingSite.getAddress();
@@ -47,8 +52,16 @@ public class PingThread extends Thread
 		{
 			try
 			{
-				if(pingSite())
-					sleep(MS_PER_PING);
+				CheckNeedEmailResponse needEmail = emailReportHandler.checkReportSend();
+				if(needEmail.getShouldSend())
+				{
+					String message = dbAccessHandler.buildRegularReportMessage(needEmail.getStartDateQuery(), needEmail.getEndDateQuery());
+					emailReportHandler.sendReport(false, message);
+				}
+				PingResponse pingResponse = pingSite();
+				PingHandlerResponse handlerResponse = pingHandler.handlePing(pingResponse);
+				handleResponse(pingResponse, handlerResponse);
+				sleep(MS_PER_PING);
 			}
 			catch(IOException | InterruptedException | SQLException e)
 			{
@@ -65,7 +78,7 @@ public class PingThread extends Thread
 	{
 		isShutDown = true;
 	}
-
+	
 	/**
 	 * Executes the ping command, parses the results, then passes them to the PingHandler.
 	 * @return true if the site was reachable
@@ -73,7 +86,7 @@ public class PingThread extends Thread
 	 * @throws InterruptedException
 	 * @throws SQLException
 	 */
-	private boolean pingSite() throws IOException, InterruptedException, SQLException
+	private PingResponse pingSite() throws IOException, InterruptedException
 	{
 		String processInput = null;
 		String pingIP = "";
@@ -94,8 +107,7 @@ public class PingThread extends Thread
 				pingLatency = parsePingLatency(processInput);
 			}
 	    }
-		pingHandler.handlePing(reachable, pingIP, pingLatency);
-		return reachable;
+		return new PingResponse(reachable, pingIP, pingLatency);
 	}
 	
 	/**
@@ -134,5 +146,38 @@ public class PingThread extends Thread
 		}
 		
 		return pingLatency;
+	}
+
+	/**
+	 * Handles database access and site unreachable email sending based off of the results of a ping.
+	 * @param pingResponse
+	 * @param handlerResponse
+	 * @throws SQLException
+	 */
+	private void handleResponse(PingResponse pingResponse, PingHandlerResponse handlerResponse) throws SQLException
+	{
+		String pingIP = pingResponse.getIP();
+		double pingLatency = pingResponse.getLatency();
+		Date currentDate = pingResponse.getPingTime();
+		switch(handlerResponse)
+		{
+		case SITE_UNREACHABLE:
+			emailReportHandler.incrementNumEmergencyReportSites(currentDate);
+			dbAccessHandler.insertLogEntry(pingSite.getName(), 1, currentDate, pingIP, pingLatency);
+			break;
+		case SITE_REACHABLE_AGAIN:
+			dbAccessHandler.insertLogEntry(pingSite.getName(), 2, currentDate, pingIP, pingLatency);
+			CheckNeedEmailResponse needEmail = emailReportHandler.decrementNumEmergencyReportSites(currentDate);
+			if(needEmail.getShouldSend())
+			{
+				String message = dbAccessHandler.buildEmergencyReportMessage(needEmail.getStartDateQuery(), needEmail.getEndDateQuery());
+				emailReportHandler.sendReport(true, message);
+			}
+			break;
+		case SITE_LATENCY_SLOW:
+			dbAccessHandler.insertLogEntry(pingSite.getName(), 3, currentDate, pingIP, pingLatency);
+			break;
+		default:
+		}
 	}
 }

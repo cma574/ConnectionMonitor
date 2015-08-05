@@ -92,8 +92,10 @@ public final class MoreDateFunctions
 		Calendar calendar = new GregorianCalendar();
 		calendar.setTime(roundDate);
 
-	    if (calendar.get(Calendar.MINUTE) >= 30)
+	    if(calendar.get(Calendar.MINUTE) >= 30)
+	    {
 	    	calendar.add(Calendar.HOUR, 1);
+	    }
 
 	    calendar.set(Calendar.MINUTE, 0);
 	    calendar.set(Calendar.SECOND, 0);
@@ -120,6 +122,16 @@ public final class MoreDateFunctions
 	{
 		return TIMESTAMP_FORMAT.format(formatDate);
 	}
+	
+	/**
+     * Formats a Date as a file name friendly timestamp.
+	 * @param formatDate     Date to format
+	 * @return The Date as a file name friendly timestamp
+     */
+    public static String formatDateAsFileTimestamp(Date formatDate)
+    {
+        return FILE_TIMESTAMP_FORMAT.format(formatDate);
+    }
 	
 	/**
 	 * Formats a Date as human readable MM/DD/YY text.
@@ -168,7 +180,7 @@ public final class MoreDateFunctions
     }
     
     /**
-     * Gets the current date and time as a file name-friendly timestamp.
+     * Gets the current date and time as a file name friendly timestamp.
      * @return The current date and time as a file name timestamp
      */
     public static String getNowFileTimestamp()

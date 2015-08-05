@@ -6,6 +6,9 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Vector;
+
+import org.my.libraries.MoreDateFunctions;
 
 /**
  * An object that handles access to DataBase and performs necessary queries and input to it. Since multiple
@@ -24,10 +27,11 @@ public class DBAccessHandler
 	private final String PASSWORD;
 	
 	//Table Names
-	private final String LOG_TABLE = "log";
-	private final String SITE_TABLE = "site";
+	private final String LOG_TABLE;
+	private final String SITE_TABLE;
 	
 	private Connection dbConnection;
+	private final Vector<String> activePingSiteNames;
 	
 	/**
 	 * Constructor.
@@ -35,13 +39,17 @@ public class DBAccessHandler
 	 * @param dbUser         User name for database
 	 * @param dbPassword     Password for database
 	 */
-	public DBAccessHandler(String dbName, String dbUser, String dbPassword)
+	public DBAccessHandler(String dbName, String dbUser, String dbPassword, Vector<String> activeSiteNames)
 	{
 		DB_URL = "jdbc:mysql://localhost/" + dbName;
 		USER = dbUser;
 		PASSWORD = dbPassword;
 		
+		activePingSiteNames = activeSiteNames;
+		
 		JDBC_DRIVER = "com.mysql.jdbc.Driver";
+		LOG_TABLE = "log";
+		SITE_TABLE = "site";
 	}
 	
 	/**
@@ -53,6 +61,21 @@ public class DBAccessHandler
 	{
 		Class.forName(JDBC_DRIVER);
 		dbConnection = DriverManager.getConnection(DB_URL, USER, PASSWORD);
+	}
+	
+	/**
+	 * Closes the connection to the database, should not be called outside the main thread.
+	 */
+	public synchronized void closeDBConnection()
+	{
+		try
+		{
+			dbConnection.close();
+		}
+		catch(SQLException sqlE)
+		{
+			sqlE.printStackTrace();
+		}
 	}
 	
 	/**
@@ -77,9 +100,13 @@ public class DBAccessHandler
 		String latencyInsertString = "NULL";
 		String ipInsertString = "NULL";
 		if(!ipAddress.isEmpty())
+		{
 			ipInsertString = ipAddress;
+		}
 		if(latency != -1)
+		{
 			latencyInsertString = Double.toString(latency);
+		}
 		
 		String sql = "INSERT INTO " + LOG_TABLE + " (fksiteid, fkstatusid, pingtime, ipaddress, latency) VALUES (" + Integer.toString(sitePKey) + ", " + 
 				Integer.toString(statusNum) + ", '" + timestampInsert + "', '" + ipInsertString + "', " + latencyInsertString + ")";
@@ -110,6 +137,80 @@ public class DBAccessHandler
 	}
 	
 	/**
+	 * Queries the database and builds a message string for a regular report email.
+	 * @param emergencyStartTime     Time to start the report at.
+	 * @param emergencyEndTime       Time to end the report at.
+	 * @return The String for the regular report email
+	 * @throws SQLException
+	 */
+	public synchronized String buildRegularReportMessage(Date reportStartTime, Date reportEndTime) throws SQLException
+	{
+		String message = "";
+		for(String siteName : activePingSiteNames)
+		{
+			int unreachableCount = 0;
+			double maxLatency = 0;
+			ArrayList<SiteRecord> siteRecords = selectReportLog(siteName, reportStartTime, reportEndTime);
+			for(SiteRecord siteRecord : siteRecords)
+			{
+				if(siteRecord.getStatusNum() == 1)
+				{
+					unreachableCount++;
+				}
+				else if(siteRecord.getStatusNum() == 3)
+				{
+					if(siteRecord.getLatency() > maxLatency)
+					{
+						maxLatency = siteRecord.getLatency();
+					}
+				}
+			}
+			if(unreachableCount != 0 || maxLatency != 0)
+			{
+				message += "Report for " + siteName + ": \nNumber of Times Unreachable: " + Integer.toString(unreachableCount) + 
+						"\nMaximum Latency: " + Double.toString(maxLatency) + "\n\n";
+			}
+		}
+		
+		if(message.isEmpty())
+		{
+			message = "Nothing to report.";
+		}
+		message = "ConnectionMonitor Report for " + MoreDateFunctions.formatDateAsTimestamp(reportStartTime) + " to " + 
+				MoreDateFunctions.formatDateAsTimestamp(reportEndTime) + "\n\n" + message;
+		
+		return message;
+	}
+	
+	/**
+	 * Queries the database and builds a message string for an emergency report email.
+	 * @param emergencyStartTIme     Time to start the report at.
+	 * @param emergencyEndTime       Time to end the report at.
+	 * @return The String for the emergency report email
+	 * @throws SQLException
+	 */
+	public synchronized String buildEmergencyReportMessage(Date emergencyStartTime, Date emergencyEndTime) throws SQLException
+	{
+		ArrayList<SiteRecord> siteRecords = selectEmergencyReportLog(emergencyStartTime, emergencyEndTime);
+		String message = "";
+		for(SiteRecord siteRecord : siteRecords)
+		{
+			if(siteRecord.getStatusNum() == 1)
+			{
+				message += MoreDateFunctions.formatDateAsTimestamp(new Date(siteRecord.getPingTime().getTime())) + ": " + 
+						siteRecord.getSiteName() + " became unreachable.\n";
+			}
+			else if(siteRecord.getStatusNum() == 2)
+			{
+				message += MoreDateFunctions.formatDateAsTimestamp(new Date(siteRecord.getPingTime().getTime())) + ": " + 
+						siteRecord.getSiteName() + " became reachable again.\n";
+			}
+		}
+		
+		return message;
+	}
+	
+	/**
 	 * Performs a query on the log table to get information required for a regular report email.
 	 * @param siteName      Name assigned to the PingSite
 	 * @param startTime     Time to start the query's WHERE clause from
@@ -117,7 +218,7 @@ public class DBAccessHandler
 	 * @return The list for the EmailReportHandler to parse out information
 	 * @throws SQLException
 	 */
-	public synchronized ArrayList<SiteRecord> selectReportLog(String siteName, Date startTime, Date endTime) throws SQLException
+	private synchronized ArrayList<SiteRecord> selectReportLog(String siteName, Date startTime, Date endTime) throws SQLException
 	{
 		ArrayList<SiteRecord> siteRecords = new ArrayList<>();
 		int sitePKey = getSitePKey(siteName);
@@ -149,7 +250,7 @@ public class DBAccessHandler
 	 * @return The list for the EmailReportHandler to parse out information
 	 * @throws SQLException
 	 */
-	public synchronized ArrayList<SiteRecord> selectEmergencyReportLog(Date startTime, Date endTime) throws SQLException
+	private synchronized ArrayList<SiteRecord> selectEmergencyReportLog(Date startTime, Date endTime) throws SQLException
 	{
 		ArrayList<SiteRecord> siteRecords = new ArrayList<>();
 		Timestamp startTimestamp = new Timestamp(startTime.getTime());
@@ -177,7 +278,7 @@ public class DBAccessHandler
 	 * @return The primary key of the PingSite entry in the site table
 	 * @throws SQLException
 	 */
-	public synchronized int getSitePKey(String siteName) throws SQLException
+	private synchronized int getSitePKey(String siteName) throws SQLException
 	{
 		int pKey = -1;
 
@@ -186,7 +287,9 @@ public class DBAccessHandler
 		ResultSet queryResult = sqlStatement.executeQuery(sql);
 
 		if(queryResult.next())
+		{
 			pKey = queryResult.getInt("pksiteid");
+		}
 		
 		sqlStatement.close();
 		queryResult.close();
@@ -200,7 +303,7 @@ public class DBAccessHandler
 	 * @return The name associated with a PingSite
 	 * @throws SQLException
 	 */
-	public synchronized String getSiteName(int pKey) throws SQLException
+	private synchronized String getSiteName(int pKey) throws SQLException
 	{
 		String siteName = "";
 		Statement sqlStatement = dbConnection.createStatement();
@@ -208,26 +311,13 @@ public class DBAccessHandler
 		ResultSet queryResult = sqlStatement.executeQuery(sql);
 
 		if(queryResult.next())
+		{
 			siteName = queryResult.getString("name");
+		}
 		
 		sqlStatement.close();
 		queryResult.close();
 		
 		return siteName;
-	}
-	
-	/**
-	 * Closes the connection to the database, should not be called outside the main thread.
-	 */
-	public synchronized void closeDBConnection()
-	{
-		try
-		{
-			dbConnection.close();
-		}
-		catch(SQLException sqlE)
-		{
-			sqlE.printStackTrace();
-		}
 	}
 }
