@@ -31,7 +31,6 @@ public class DBAccessHandler
 	private final String SITE_TABLE;
 	
 	private Connection dbConnection;
-	private final Vector<String> activePingSiteNames;
 	
 	/**
 	 * Constructor.
@@ -39,13 +38,11 @@ public class DBAccessHandler
 	 * @param dbUser         User name for database
 	 * @param dbPassword     Password for database
 	 */
-	public DBAccessHandler(String dbName, String dbUser, String dbPassword, Vector<String> activeSiteNames)
+	public DBAccessHandler(String dbName, String dbUser, String dbPassword)
 	{
 		DB_URL = "jdbc:mysql://localhost/" + dbName;
 		USER = dbUser;
 		PASSWORD = dbPassword;
-		
-		activePingSiteNames = activeSiteNames;
 		
 		JDBC_DRIVER = "com.mysql.jdbc.Driver";
 		LOG_TABLE = "log";
@@ -138,12 +135,13 @@ public class DBAccessHandler
 	
 	/**
 	 * Queries the database and builds a message string for a regular report email.
-	 * @param emergencyStartTime     Time to start the report at.
-	 * @param emergencyEndTime       Time to end the report at.
+	 * @param activePingSiteNames     List of active ping site names
+	 * @param emergencyStartTime      Time to start the report at
+	 * @param emergencyEndTime        Time to end the report at
 	 * @return The String for the regular report email
 	 * @throws SQLException
 	 */
-	public synchronized String buildRegularReportMessage(Date reportStartTime, Date reportEndTime) throws SQLException
+	public synchronized String buildRegularReportMessage(Vector<String> activePingSiteNames, Date reportStartTime, Date reportEndTime) throws SQLException
 	{
 		String message = "";
 		for(String siteName : activePingSiteNames)
@@ -184,8 +182,8 @@ public class DBAccessHandler
 	
 	/**
 	 * Queries the database and builds a message string for an emergency report email.
-	 * @param emergencyStartTIme     Time to start the report at.
-	 * @param emergencyEndTime       Time to end the report at.
+	 * @param emergencyStartTIme     Time to start the report at
+	 * @param emergencyEndTime       Time to end the report at
 	 * @return The String for the emergency report email
 	 * @throws SQLException
 	 */

@@ -67,4 +67,17 @@ public class IOUtilities
 		catch(IOException e)
 		{}
 	}
+	
+	/**
+	 * Determines whether an input's response was Yes, where it is the default for an empty string.
+	 * @param input     String to parse
+	 * @return true if the response was Yes, Y, or empty, otherwise false
+	 */
+	public static boolean parseDefaultYes(String input)
+	{
+		input = input.toUpperCase();
+		boolean isYes = (input.length() == 0 || input.equals("Y") || input.equals("YES"));
+		
+		return isYes;
+	}
 }

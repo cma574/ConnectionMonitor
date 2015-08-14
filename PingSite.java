@@ -96,4 +96,17 @@ public class PingSite
 	{
 		deviationTolerance = siteDeviationTolerance;
 	}
+	
+	/**
+	 * Overridden toString() method. Displays PingSite info.
+	 */
+	@Override
+	public String toString()
+	{
+		return getName() + 
+				"\n  Address: " + getAddress() + 
+				"\n  Average Latency: " + getAvgLatency() + 
+				"\n  Standard Deviation: " + getLatencyStdDeviation() + 
+				"\n  Deviation Tolerance: " + getDeviationTolerance();
+	}
 }

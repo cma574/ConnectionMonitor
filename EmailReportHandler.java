@@ -34,7 +34,7 @@ public class EmailReportHandler
 		reportFrequency = emailFrequency;
 		numEmergencyReportSites = 0;
 		lastRegularReport = MoreDateFunctions.roundToHour(new Date());
-		if(!stationName.isEmpty())
+		if(stationName != null && !stationName.isEmpty())
 		{
 			stationHeader = stationName + " - ";
 		}
@@ -53,8 +53,9 @@ public class EmailReportHandler
 		Date currentDate = new Date();
 		if(MoreDateFunctions.timeDiffInHours(currentDate, lastRegularReport) >= reportFrequency)
 		{
+			currentDate = MoreDateFunctions.roundToHour(currentDate);
 			response = new CheckNeedEmailResponse(lastRegularReport, currentDate);
-			lastRegularReport = MoreDateFunctions.roundToHour(currentDate);
+			lastRegularReport = currentDate;
 		}
 		else
 		{

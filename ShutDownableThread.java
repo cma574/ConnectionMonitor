@@ -1,0 +1,25 @@
+/**
+ * Provides the shutDown method to Threads to allow for the graceful shut down of the program.
+ * @author Cory Ma
+ */
+public class ShutDownableThread extends Thread
+{
+	protected boolean isShutDown = false;
+	
+	/**
+	 * Constructor.
+	 * @param name     Name of the Thread
+	 */
+	public ShutDownableThread(String name)
+	{
+		super(name);
+	}
+	
+	/**
+	 * Sets the isShutDown flag to insure the thread shuts down gracefully.
+	 */
+	public void shutDown()
+	{
+		isShutDown = true;
+	}
+}

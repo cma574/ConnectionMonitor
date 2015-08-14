@@ -1,12 +1,6 @@
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Date;
 
-import org.my.libraries.IOUtilities;
 import org.my.libraries.MoreDateFunctions;
-import org.my.libraries.MoreMath;
 
 /**
  * An object that receives results of a ping and processes them accordingly, writing to the database
@@ -22,13 +16,6 @@ public class PingHandler
 	private boolean wasSiteUnreachable; //Flag for whether the last ping was unreachable
 	private boolean needEmergencyNotification; //Flag for whether contact was already done
 	private Date outageStart;
-	private FileWriter logWriter;
-	
-	//Variables for recalculating standard deviation
-	private ArrayList<Double> latencyValues;
-	private Date lastRecalculated;
-	private int hoursForUpdate = 5;
-	private int sampleSize = 4000;
 	
 	/**
 	 * Constructor.
@@ -40,27 +27,10 @@ public class PingHandler
 		
 		wasSiteUnreachable = false;
 		needEmergencyNotification = false;
-		latencyValues = new ArrayList<Double>(sampleSize);
-		
-		lastRecalculated = new Date();
-		
-		File logsDir = new File("logs");
-		logsDir.mkdir();
-		File logFile = new File(logsDir, site.getName() + "_log.txt");
-		
-		try
-		{
-			logWriter = new FileWriter(logFile, true);
-		}
-		catch(IOException e)
-		{
-			e.printStackTrace();
-			System.exit(-1);
-		}
 	}
 	
 	/**
-	 * Determines what actions need to be done based on results of a ping.
+	 * Determines what actions need to be done based on results of a ping and returns the decision.
 	 * @param pingResponse       Results of the ping
 	 * @return NO_PROBLEMS by default
 	 * 	        SITE_UNREACHABLE if site is unreachable after outageEmergency seconds have passed with wasSiteUnreachable is set
@@ -89,15 +59,6 @@ public class PingHandler
 			{
 				response = PingHandlerResponse.SITE_LATENCY_SLOW;
 			}
-			
-			if(MoreMath.modulo((int)MoreDateFunctions.timeDiffInHours(currentDate, lastRecalculated), 24) >= hoursForUpdate )
-			{
-				latencyValues.add(pingLatency);
-				if(latencyValues.size() >= sampleSize)
-				{
-					updatePingSiteInfo(currentDate);
-				}
-			}
 		}
 		else
 		{
@@ -120,52 +81,11 @@ public class PingHandler
 	}
 	
 	/**
-	 * Closes the FileWriter for the log.
-	 */
-	public void closeFileWriter()
-	{
-		IOUtilities.closeCloseable(logWriter);
-	}
-	
-	/**
-	 * Updates information for average latency and standard deviation for a PingSite.
-	 * @param currentDate     Date the update happened for logging
-	 */
-	private void updatePingSiteInfo(Date currentDate)
-	{
-		pingSite.setAvgLatency(MoreMath.mean(latencyValues));
-		pingSite.setLatencyStdDeviation(MoreMath.stdDev(latencyValues));
-		lastRecalculated = currentDate;
-		latencyValues.clear();
-		String message = MoreDateFunctions.formatDateAsTimestamp(currentDate) + ": " + pingSite.getAddress() + " - " + "Average Latency is adjusted to " + 
-				Double.toString(pingSite.getAvgLatency()) + " and Standard Deviation is adjusted to " + Double.toString(pingSite.getLatencyStdDeviation());
-		writeToLog(message, "\n");
-	}
-	
-	/**
 	 * Resets flags set for emergency reporting.
 	 */
 	private void resetEmergencyReporting()
 	{
 		wasSiteUnreachable = false;
 		needEmergencyNotification = false;
-	}
-	
-	/**
-	 * Writes a message to the log.
-	 * @param message       Message to write
-	 * @param separator     Separator to use between messages
-	 */
-	private void writeToLog(String message, String separator)
-	{
-		try
-		{
-			logWriter.write(message + separator);
-			logWriter.flush();
-		}
-		catch(IOException e)
-		{
-			e.printStackTrace();
-		}
 	}
 }
