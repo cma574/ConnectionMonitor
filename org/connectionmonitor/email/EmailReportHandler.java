@@ -1,4 +1,5 @@
 package org.connectionmonitor.email;
+
 import java.util.Date;
 
 import org.my.libraries.MoreDateFunctions;

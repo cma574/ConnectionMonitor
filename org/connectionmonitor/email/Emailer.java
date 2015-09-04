@@ -1,4 +1,5 @@
 package org.connectionmonitor.email;
+
 import java.util.Properties;
 
 import javax.mail.Message;

@@ -1,4 +1,5 @@
 package org.connectionmonitor.db;
+
 import java.sql.Timestamp;
 
 /**

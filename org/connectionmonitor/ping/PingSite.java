@@ -1,4 +1,5 @@
 package org.connectionmonitor.ping;
+
 /**
  * An object to store information for locations to run the ping command on.
  * @author Cory Ma

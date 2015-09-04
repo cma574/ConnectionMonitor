@@ -1,4 +1,5 @@
 package org.connectionmonitor.ping;
+
 import java.util.Date;
 
 import org.my.libraries.MoreDateFunctions;

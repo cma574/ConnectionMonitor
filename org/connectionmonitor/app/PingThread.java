@@ -1,17 +1,14 @@
 package org.connectionmonitor.app;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.connectionmonitor.db.DBAccessHandler;
 import org.connectionmonitor.email.CheckNeedEmailResponse;
 import org.connectionmonitor.email.EmailReportHandler;
+import org.connectionmonitor.ping.PingAction;
 import org.connectionmonitor.ping.PingHandler;
 import org.connectionmonitor.ping.PingHandlerResponse;
 import org.connectionmonitor.ping.PingResponse;
@@ -20,14 +17,12 @@ import org.my.libraries.MoreDateFunctions;
 import org.my.libraries.MoreMath;
 
 /**
- * Thread that runs the system's ping command, then parses and passes the results to
- * PingHandler for processing.
+ * Thread that runs the system's ping command, then parses and passes the results for processing.
  * @author Cory Ma
  */
 public class PingThread extends ShutDownableThread
 {
 	//Variables for ping command
-	private String command;
 	private final int MS_PER_PING = 1000;
 	
 	private PingSite pingSite;
@@ -59,7 +54,6 @@ public class PingThread extends ShutDownableThread
 		lastRecalculated = new Date();
 		
 		//Set command to perform single ping -c 1 works with Linux/Mac
-		command = "ping -c 1 " + pingSite.getAddress();
 		pingHandler = handler;
 	}
 	
@@ -75,7 +69,7 @@ public class PingThread extends ShutDownableThread
 		{
 			try
 			{
-				PingResponse pingResponse = pingSite();
+				PingResponse pingResponse = PingAction.pingSite(pingSite.getAddress());
 				PingHandlerResponse handlerResponse = pingHandler.handlePing(pingResponse);
 				handleResponse(pingResponse, handlerResponse);
 				if(pingResponse.getReachable() && checkNeedPingSiteUpdate())
@@ -91,75 +85,6 @@ public class PingThread extends ShutDownableThread
 		}
 	}
 	
-	/**
-	 * Executes the ping command, parses the results, then passes them to the PingHandler.
-	 * @return true if the site was reachable
-	 * @throws IOException
-	 * @throws InterruptedException
-	 * @throws SQLException
-	 */
-	private PingResponse pingSite() throws IOException, InterruptedException
-	{
-		String processInput = null;
-		String pingIP = "";
-		double pingLatency = -1;
-		
-        Process pingProcess = java.lang.Runtime.getRuntime().exec(command); //Forks process and executes command
-		BufferedReader stdInput = new BufferedReader(new InputStreamReader(pingProcess.getInputStream()));
-		int returnVal = pingProcess.waitFor(); //Waits for return from ping command
-		boolean reachable = (returnVal == 0);
-		while(((processInput = stdInput.readLine()) != null))
-		{
-			if(pingIP.isEmpty())
-			{
-				pingIP = parsePingIP(processInput);
-			}
-			if(reachable && pingLatency == -1)
-			{
-				pingLatency = parsePingLatency(processInput);
-			}
-	    }
-		return new PingResponse(reachable, pingIP, pingLatency);
-	}
-	
-	/**
-	 * Parses the IP address from output line from the ping.
-	 * @param pingString     Output line from the ping
-	 * @return The IP address if successful, otherwise an empty String
-	 */
-	private String parsePingIP(String pingString)
-	{
-		String pingIP = "";
-		Pattern ipPattern = Pattern.compile(".*\\b(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})\\b.*");
-		Matcher ipMatcher = ipPattern.matcher(pingString);
-		if(ipMatcher.find())
-		{
-			pingIP = ipMatcher.group(1);
-		}
-		return pingIP;
-	}
-	
-	/**
-	 * Parses the latency from an output line from the ping.
-	 * @param pingString     Output line from the ping
-	 * @return The latency if successful, otherwise -1
-	 */
-	private double parsePingLatency(String pingString)
-	{
-		double pingLatency = -1;
-		Pattern latencyPattern = Pattern.compile(".*time=(\\d{1,6}.\\d{1,3}) ms");
-		Matcher latencyMatcher = latencyPattern.matcher(pingString);
-		String latencyString;
-		
-		if(latencyMatcher.find())
-		{
-			latencyString = latencyMatcher.group(1);
-			pingLatency = Double.parseDouble(latencyString);
-		}
-		
-		return pingLatency;
-	}
-
 	/**
 	 * Handles database access and site unreachable email sending based off of the results of a ping.
 	 * @param pingResponse

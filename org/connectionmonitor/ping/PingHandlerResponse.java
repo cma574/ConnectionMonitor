@@ -1,4 +1,5 @@
 package org.connectionmonitor.ping;
+
 /**
  * Enumeration of possible responses from the PingHandler
  * @author Cory Ma
