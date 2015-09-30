@@ -16,9 +16,8 @@ public final class MoreDateFunctions
 	private final static SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyMMdd", Locale.US);
     private final static SimpleDateFormat SLASH_DATE_FORMAT = new SimpleDateFormat("MM/dd/yy", Locale.US);
     private final static SimpleDateFormat TIMESTAMP_FORMAT = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss a", Locale.US);
-    private final static SimpleDateFormat FM_TIMESTAMP_FORMAT = new SimpleDateFormat("yyyy/MM/dd hh:mm:ss a", Locale.US);
+    private final static SimpleDateFormat FM_TIMESTAMP_FORMAT = new SimpleDateFormat("MM/dd/yyyy hh:mm:ss a", Locale.US);
     private final static SimpleDateFormat FILE_TIMESTAMP_FORMAT = new SimpleDateFormat("yyMMdd_kkmm", Locale.US);
-	
 	
     /**
      * Calculates the difference of two Dates in days.
