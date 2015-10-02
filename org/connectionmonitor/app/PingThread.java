@@ -65,7 +65,7 @@ public class PingThread extends ShutDownableThread
 	@Override
 	public void run()
 	{
-		while(!isShutDown)
+		while(!isShutDown())
 		{
 			try
 			{

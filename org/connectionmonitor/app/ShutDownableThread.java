@@ -6,7 +6,7 @@ package org.connectionmonitor.app;
  */
 public class ShutDownableThread extends Thread
 {
-	protected boolean isShutDown = false;
+	private boolean isShutDown = false;
 	
 	/**
 	 * Constructor.
@@ -23,5 +23,14 @@ public class ShutDownableThread extends Thread
 	public void shutDown()
 	{
 		isShutDown = true;
+	}
+	
+	/**
+	 * Gets the value of isShutDown.
+	 * @return The value of isShutDown
+	 */
+	protected boolean isShutDown()
+	{
+		return isShutDown;
 	}
 }

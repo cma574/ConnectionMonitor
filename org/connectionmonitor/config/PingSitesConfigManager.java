@@ -21,11 +21,11 @@ import org.my.libraries.IOUtilities;
  */
 public class PingSitesConfigManager
 {
-	private final String PINGSITES_FILENAME = "PingSites.properties";
-	private final String JSON_ADDR = "address";
-	private final String JSON_AVG = "average";
-	private final String JSON_STDDEV = "stddev";
-	private final String JSON_TOLERANCE = "tolerance";
+	private final static String PINGSITES_FILENAME = "PingSites.properties";
+	private final static String JSON_ADDR = "address";
+	private final static String JSON_AVG = "average";
+	private final static String JSON_STDDEV = "stddev";
+	private final static String JSON_TOLERANCE = "tolerance";
 	
 	private Properties pingSitesConfig = new Properties();
 	

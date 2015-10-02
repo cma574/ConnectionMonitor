@@ -20,16 +20,16 @@ import org.my.libraries.IOUtilities;
  */
 public class DBEmailerConfigManager
 {
-	private final String DBEMAILER_FILENAME = "DBEmailer.properties";
-	private final String PROP_DBNAME = "DBName";
-	private final String PROP_DBUSER = "DBUser";
-	private final String PROP_DBPWD = "DBPassword";
-	private final String PROP_REPORTFREQUENCY = "ReportFrequency";
-	private final String PROP_NOTIFYLIST = "NotifyList";
-	private final String PROP_EMERGENCYNOTIFYLIST = "EmergencyNotifyList";
-	private final String PROP_STATIONNAME = "StationName";
-	private final String PROP_EMAILADDR = "EmailAddress";
-	private final String PROP_EMAILPWD = "EmailPassword";
+	private final static String DBEMAILER_FILENAME = "DBEmailer.properties";
+	private final static String PROP_DBNAME = "DBName";
+	private final static String PROP_DBUSER = "DBUser";
+	private final static String PROP_DBPWD = "DBPassword";
+	private final static String PROP_REPORTFREQUENCY = "ReportFrequency";
+	private final static String PROP_NOTIFYLIST = "NotifyList";
+	private final static String PROP_EMERGENCYNOTIFYLIST = "EmergencyNotifyList";
+	private final static String PROP_STATIONNAME = "StationName";
+	private final static String PROP_EMAILADDR = "EmailAddress";
+	private final static String PROP_EMAILPWD = "EmailPassword";
 	
 	private Properties dbEmailConfig = new Properties();
 	
